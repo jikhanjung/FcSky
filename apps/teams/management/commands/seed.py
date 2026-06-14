@@ -91,9 +91,20 @@ MATCHES = [
         "venue": "인재개발원", "our_score": 6, "opp_score": 0, "events": [],
     },
     {
+        # 8:0 경기 득점자(소스: 사용자 제공 "2-30대 1경기"). 단축명→정식명 매핑.
         "our": "sky-k7", "opp": "내곡", "comp": "seocho-cup-35",
         "kickoff": datetime(2026, 6, 14, 15, 30), "is_home": True,
-        "venue": "인재개발원", "our_score": 8, "opp_score": 0, "events": [],
+        "venue": "인재개발원", "our_score": 8, "opp_score": 0,
+        "events": [
+            {"side": "OUR", "type": "GOAL", "player": "박주성"},
+            {"side": "OUR", "type": "GOAL", "player": "박주성"},
+            {"side": "OUR", "type": "GOAL", "player": "동재민"},
+            {"side": "OUR", "type": "GOAL", "player": "김민성"},
+            {"side": "OUR", "type": "GOAL", "player": "박찬영"},
+            {"side": "OUR", "type": "GOAL", "player": "박주성"},
+            {"side": "OUR", "type": "GOAL", "player": "김민성"},
+            {"side": "OUR", "type": "GOAL", "player": "김민성"},
+        ],
     },
     # ── 40대 ──
     {
