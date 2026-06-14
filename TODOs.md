@@ -39,11 +39,13 @@
 
 ## 🚀 Phase 5 — 배포 & 운영
 
-- [ ] PostgreSQL 전환
-- [ ] 정적/미디어 파일 운영 설정 (WhiteNoise/S3)
-- [ ] 배포 (Gunicorn + Nginx 또는 PaaS)
-- [ ] 도메인 연결, HTTPS, 백업
-- [ ] `SECRET_KEY`/`DEBUG`/`ALLOWED_HOSTS` 운영 분리, 관리자 계정 비밀번호 교체
+- [x] Docker 이미지화 (`deploy/`, `honestjung/fcsky:0.1.0`, Gunicorn)
+- [x] 정적 파일 운영 설정 (WhiteNoise) — 미디어/S3는 추후
+- [x] `SECRET_KEY`/`DEBUG`/`ALLOWED_HOSTS` 환경변수 분리 (운영 키 지정은 배포 시)
+- [ ] PostgreSQL 전환 (현재 SQLite, 컨테이너 내부 휘발)
+- [ ] 미디어 파일 운영 설정 (볼륨/S3)
+- [ ] 리버스 프록시(Nginx) + HTTPS + 도메인 연결, 백업
+- [ ] 관리자 계정 비밀번호 교체
 
 ## 🧹 기술 부채 / 개선 메모
 
