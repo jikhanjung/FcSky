@@ -51,6 +51,12 @@ ROSTERS = {
         ("김지훈", "MF", 84), ("신윤수", "MF", 86), ("이시호", "FW", 88),
         ("김지한", "GK", 90), ("임도훈", "MF", 99),
     ],
+    # 40대 스쿼드: 서초구청장기 득점자. 엄길헌·최창원·신윤수는 K7 명단과 동일인
+    # (대회에 따라 K7/40대 스쿼드를 오감 — 팀 인원은 대회마다 변동). 도정구는 신규.
+    "sky-40": [
+        ("엄길헌", "FW", None), ("최창원", "MF", None),
+        ("도정구", "", None), ("신윤수", "MF", None),
+    ],
     "sky-50": [
         ("한성준", "", None), ("심종신", "", None),
         ("김흥식", "", None), ("윤기우", "", None),
@@ -108,15 +114,25 @@ MATCHES = [
     },
     # ── 40대 ──
     {
+        # 7:0 중 득점자 5골 확인(나머지 2골 미상). 길헌=엄길헌, 창원=최창원, 정구=도정구.
         "our": "sky-40", "opp": "온누리공사랑", "comp": "seocho-cup-35",
         "kickoff": datetime(2026, 6, 14, 13, 30), "is_home": True,
-        "venue": "반포종합운동장", "our_score": 7, "opp_score": 0, "events": [],
+        "venue": "반포종합운동장", "our_score": 7, "opp_score": 0,
+        "events": [
+            {"side": "OUR", "type": "GOAL", "player": "엄길헌"},
+            {"side": "OUR", "type": "GOAL", "player": "엄길헌"},
+            {"side": "OUR", "type": "GOAL", "player": "최창원"},
+            {"side": "OUR", "type": "GOAL", "player": "도정구"},
+            {"side": "OUR", "type": "GOAL", "player": "신윤수"},
+        ],
     },
     {
+        # 3:1 중 엄길헌 1골 확인(나머지 2골 미상), 실점 1.
         "our": "sky-40", "opp": "신반포", "comp": "seocho-cup-35",
         "kickoff": datetime(2026, 6, 14, 15, 30), "is_home": False,
         "venue": "반포종합운동장", "our_score": 3, "opp_score": 1,
         "events": [
+            {"side": "OUR", "type": "GOAL", "player": "엄길헌"},
             {"side": "OPPONENT", "type": "GOAL"},
         ],
     },
