@@ -92,14 +92,9 @@ OPPONENTS = [
 MATCHES = [
     # ── 2-30대 (K7) ──
     {
+        # 1경기(11:30 방현) 8:0. 득점자 단축명→정식명: 주성=박주성, 민성=김민성, 찬영=박찬영.
         "our": "sky-k7", "opp": "방현", "comp": "seocho-cup-35",
         "kickoff": datetime(2026, 6, 14, 11, 30), "is_home": False,
-        "venue": "인재개발원", "our_score": 6, "opp_score": 0, "events": [],
-    },
-    {
-        # 8:0 경기 득점자(소스: 사용자 제공 "2-30대 1경기"). 단축명→정식명 매핑.
-        "our": "sky-k7", "opp": "내곡", "comp": "seocho-cup-35",
-        "kickoff": datetime(2026, 6, 14, 15, 30), "is_home": True,
         "venue": "인재개발원", "our_score": 8, "opp_score": 0,
         "events": [
             {"side": "OUR", "type": "GOAL", "player": "박주성"},
@@ -110,6 +105,16 @@ MATCHES = [
             {"side": "OUR", "type": "GOAL", "player": "박주성"},
             {"side": "OUR", "type": "GOAL", "player": "김민성"},
             {"side": "OUR", "type": "GOAL", "player": "김민성"},
+        ],
+    },
+    {
+        # 2경기(15:30 내곡) 8:0. 1~6골 득점자 미확보, 7·8골만 확인(주성=박주성, 주승=박주승 PK).
+        "our": "sky-k7", "opp": "내곡", "comp": "seocho-cup-35",
+        "kickoff": datetime(2026, 6, 14, 15, 30), "is_home": True,
+        "venue": "인재개발원", "our_score": 8, "opp_score": 0,
+        "events": [
+            {"side": "OUR", "type": "GOAL", "player": "박주성"},
+            {"side": "OUR", "type": "GOAL", "player": "박주승", "desc": "PK"},
         ],
     },
     # ── 40대 ──
@@ -237,6 +242,7 @@ class Command(BaseCommand):
                         side=ev["side"],
                         event_type=ev["type"],
                         player=players.get(ev["player"]) if ev.get("player") else None,
+                        description=ev.get("desc", ""),
                     )
 
         self.stdout.write(self.style.SUCCESS(
