@@ -55,4 +55,7 @@
 {% if match.note %}<p class="text-muted"><strong>비고:</strong> {{ match.note|linebreaksbr }}</p>{% endif %}
 
 <a href="{% url 'matches:list' %}" class="btn btn-outline-secondary btn-sm">← 일정·결과로</a>
+{% if user.is_staff %}
+  <a href="{% url 'matches:edit' match.pk %}" class="btn btn-primary btn-sm">결과 편집</a>
+{% endif %}
 {% endblock %}

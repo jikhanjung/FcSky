@@ -1,9 +1,12 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.competitions.models import Competition, Season
 from apps.teams.models import Team
 
+from .forms import MatchEventFormSet, MatchResultForm
 from .models import Match, MatchEvent
 from .services import (
     AGE_ORDER as _AGE_ORDER,
@@ -55,6 +58,33 @@ def schedule(request):
         **_common_filters(),
     }
     return render(request, "matches/match_list.html", context)
+
+
+staff_required = user_passes_test(lambda u: u.is_staff, login_url="login")
+
+
+@staff_required
+def match_edit(request, pk):
+    """운영진용 경기 결과 편집 (스코어·상태 + 득점/도움/시간 이벤트). 사이트 내 직접 편집."""
+    match = get_object_or_404(
+        Match.objects.select_related("our_team", "opponent", "competition"), pk=pk
+    )
+    if request.method == "POST":
+        form = MatchResultForm(request.POST, instance=match)
+        formset = MatchEventFormSet(request.POST, instance=match)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.success(request, "경기 결과를 저장했습니다.")
+            return redirect("matches:detail", pk=match.pk)
+    else:
+        form = MatchResultForm(instance=match)
+        formset = MatchEventFormSet(instance=match)
+    return render(
+        request,
+        "matches/match_edit.html",
+        {"match": match, "form": form, "formset": formset},
+    )
 
 
 def match_detail(request, pk):

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}결과 편집 — {{ match.our_team }} vs {{ match.opponent }}{% endblock %}
+{% block content %}
+
+<h1 class="h4 mb-1">경기 결과 편집</h1>
+<p class="text-muted small">
+  {{ match.kickoff|date:"Y-m-d (D) H:i" }} · {{ match.our_team }} vs {{ match.opponent }} · {{ match.competition }}
+</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {# ── 스코어 · 상태 ── #}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">스코어 · 상태</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-6 col-md-3">
+          <label class="form-label">{{ match.our_team }} 득점</label>
+          {{ form.our_score }}
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label">{{ match.opponent }} 득점</label>
+          {{ form.opponent_score }}
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label">상태</label>
+          {{ form.status }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">비고</label>
+          {{ form.note }}
+        </div>
+      </div>
+      {% if form.errors %}<div class="text-danger small mt-2">{{ form.errors }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# ── 득점 · 도움 · 카드 등 이벤트 ── #}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">득점 · 도움 · 카드 등 이벤트</div>
+    <div class="card-body">
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}<div class="text-danger small mb-2">{{ formset.non_form_errors }}</div>{% endif %}
+      <div class="table-responsive">
+        <table class="table align-middle mb-2" id="event-table">
+          <thead class="table-light">
+            <tr>
+              <th style="min-width:7rem">이벤트</th>
+              <th style="min-width:7rem">팀</th>
+              <th style="min-width:9rem">선수</th>
+              <th style="width:5rem">분</th>
+              <th style="min-width:8rem">설명</th>
+              <th class="text-center" style="width:3.5rem">삭제</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in formset %}
+              <tr>
+                {{ f.id }}
+                <td>{{ f.event_type }}{% if f.event_type.errors %}<div class="text-danger small">{{ f.event_type.errors }}</div>{% endif %}</td>
+                <td>{{ f.side }}</td>
+                <td>{{ f.player }}</td>
+                <td>{{ f.minute }}</td>
+                <td>{{ f.description }}</td>
+                <td class="text-center">{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="add-row">+ 행 추가</button>
+      <div class="form-text mt-2">
+        득점은 ‘득점’, 어시스트는 ‘도움’으로 각각 한 줄씩 추가하고 분(시간)을 적으세요.
+        상대팀 득점은 ‘팀’을 상대팀으로 두고 선수는 비웁니다.
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">저장</button>
+  <a href="{% url 'matches:detail' match.pk %}" class="btn btn-outline-secondary">취소</a>
+</form>
+
+{# JS로 행을 복제하기 위한 빈 폼 템플릿 #}
+<template id="empty-row">
+  <tr>
+    {{ formset.empty_form.id }}
+    <td>{{ formset.empty_form.event_type }}</td>
+    <td>{{ formset.empty_form.side }}</td>
+    <td>{{ formset.empty_form.player }}</td>
+    <td>{{ formset.empty_form.minute }}</td>
+    <td>{{ formset.empty_form.description }}</td>
+    <td></td>
+  </tr>
+</template>
+
+<script>
+(function () {
+  var addBtn = document.getElementById('add-row');
+  var tbody = document.querySelector('#event-table tbody');
+  var tmpl = document.getElementById('empty-row').innerHTML;
+  var total = document.getElementById('id_{{ formset.prefix }}-TOTAL_FORMS');
+  if (!addBtn || !tbody || !total) return;
+  addBtn.addEventListener('click', function () {
+    var idx = parseInt(total.value, 10);
+    var html = tmpl.replace(/__prefix__/g, idx);
+    var holder = document.createElement('tbody');
+    holder.innerHTML = html;
+    tbody.appendChild(holder.firstElementChild);
+    total.value = idx + 1;
+  });
+})();
+</script>
+{% endblock %}
