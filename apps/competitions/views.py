@@ -1,6 +1,13 @@
-from django.shortcuts import render
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, render
 
-from apps.matches.models import Match, OpponentMatch
+from apps.matches.models import Match, MatchEvent, OpponentMatch
+from apps.matches.services import (
+    club_record,
+    event_ranking,
+    finished_matches,
+    our_events,
+)
 
 from .models import Award, Competition, Season
 
@@ -140,3 +147,57 @@ def awards(request):
         "selected": {"season": season},
     }
     return render(request, "competitions/awards.html", context)
+
+
+def season_index(request):
+    """시즌별 아카이브 목록: 시즌마다 종료 경기 수·입상 수 요약."""
+    seasons = Season.objects.annotate(
+        finished=Count(
+            "matches",
+            filter=Q(matches__status=Match.Status.FINISHED),
+            distinct=True,
+        ),
+        award_count=Count("awards", distinct=True),
+    ).order_by("-year")
+    return render(
+        request, "competitions/season_index.html", {"seasons": seasons}
+    )
+
+
+def season_detail(request, pk):
+    """시즌 종합 아카이브: 클럽 요약 + 출전 대회·입상 + 득점/도움 TOP + 최근 경기."""
+    season = get_object_or_404(Season, pk=pk)
+
+    teams, club = club_record(finished_matches(season.id))
+
+    ev = our_events(season.id)
+    scorers = event_ranking(ev, MatchEvent.EventType.GOAL, limit=10)
+    assisters = event_ranking(ev, MatchEvent.EventType.ASSIST, limit=10)
+
+    competitions = (
+        Competition.objects.filter(matches__season=season)
+        .distinct()
+        .order_by("name")
+    )
+    awards = (
+        Award.objects.filter(season=season)
+        .select_related("competition", "team", "player")
+        .order_by("competition__name", "rank")
+    )
+    recent = (
+        Match.objects.filter(season=season, status=Match.Status.FINISHED)
+        .select_related("our_team", "opponent", "competition")
+        .order_by("-kickoff")[:10]
+    )
+
+    context = {
+        "season": season,
+        "teams": teams,
+        "club": club,
+        "scorers": scorers,
+        "assisters": assisters,
+        "competitions": competitions,
+        "awards": awards,
+        "recent": recent,
+    }
+    return render(request, "competitions/season_detail.html", context)
