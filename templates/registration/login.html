@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}운영진 로그인 — FC Sky{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-5">
+    <h1 class="h4 mb-3">운영진 로그인</h1>
+    {% if form.errors %}
+      <div class="alert alert-danger">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+    {% endif %}
+    <form method="post" class="card card-body shadow-sm">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label" for="id_username">아이디</label>
+        <input type="text" name="username" id="id_username" class="form-control" autofocus required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="id_password">비밀번호</label>
+        <input type="password" name="password" id="id_password" class="form-control" required>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn-primary">로그인</button>
+    </form>
+    <p class="text-muted small mt-3">운영진 계정만 로그인할 수 있습니다.</p>
+  </div>
+</div>
+{% endblock %}

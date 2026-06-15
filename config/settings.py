@@ -159,6 +159,11 @@ if 'test' not in sys.argv:
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# 인증 (운영진 로그인)
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'teams:home'
+LOGOUT_REDIRECT_URL = 'teams:home'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
