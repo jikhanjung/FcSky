@@ -97,7 +97,7 @@ def match_edit(request, pk):
                 if goal.pk and goal.event_type == GOAL and assist_player:
                     MatchEvent.objects.create(
                         match=match, event_type=ASSIST, side=goal.side,
-                        player=assist_player, minute=goal.minute,
+                        player=assist_player, minute=goal.minute, goal=goal,
                     )
             messages.success(request, "경기 결과를 저장했습니다.")
             return redirect("matches:detail", pk=match.pk)
@@ -129,33 +129,37 @@ def match_detail(request, pk):
 
 
 def _build_timeline(events):
-    """타임라인 항목 구성. 같은 팀·같은 분의 득점-도움을 한 줄로 묶는다.
+    """타임라인 항목 구성. 득점과 그 도움을 한 줄로 묶는다.
 
     각 항목은 {"event": 주 이벤트, "assist": 도움 이벤트 또는 None}.
-    득점에는 짝이 되는 도움을, 짝 없는 도움/그 외 이벤트는 단독으로 둔다.
+    도움은 명시적 링크(MatchEvent.goal)로 해당 득점에 정확히 연결한다.
+    링크가 없는 과거 데이터는 같은 팀·같은 '분(분이 있을 때만)'으로만 보수적으로 페어링한다.
     """
     GOAL = MatchEvent.EventType.GOAL
     ASSIST = MatchEvent.EventType.ASSIST
+    assist_by_goal = {e.goal_id: e for e in events if e.event_type == ASSIST and e.goal_id}
     used = set()
     timeline = []
     for e in events:
         if e.id in used:
             continue
-        if e.event_type in (GOAL, ASSIST):
-            want = ASSIST if e.event_type == GOAL else GOAL
-            mate = next(
-                (m for m in events
-                 if m.id not in used and m.id != e.id
-                 and m.event_type == want and m.side == e.side
-                 and m.minute == e.minute),
-                None,
-            )
-            if mate:
-                used.add(mate.id)
-            goal = e if e.event_type == GOAL else mate
-            assist = mate if e.event_type == GOAL else e
-            # 짝이 없으면 e 단독(득점이든 도움이든)
-            timeline.append({"event": goal or e, "assist": assist if goal else None})
+        if e.event_type == GOAL:
+            assist = assist_by_goal.get(e.id)
+            if assist is None:  # 레거시(링크 없는 과거 데이터) 폴백: 같은 팀 도움을 순서대로 소비
+                assist = next(
+                    (a for a in events
+                     if a.event_type == ASSIST and not a.goal_id and a.id not in used
+                     and a.side == e.side),
+                    None,
+                )
+            if assist:
+                used.add(assist.id)
+            timeline.append({"event": e, "assist": assist})
+        elif e.event_type == ASSIST:
+            if e.goal_id:        # 자기 득점과 함께 표시 → 단독으로 내지 않음
+                used.add(e.id)
+                continue
+            timeline.append({"event": e, "assist": None})  # 링크 없는 단독 도움
         else:
             timeline.append({"event": e, "assist": None})
         used.add(e.id)

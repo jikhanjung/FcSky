@@ -158,6 +158,12 @@ class MatchEvent(models.Model):
     event_type = models.CharField("이벤트", max_length=10, choices=EventType.choices)
     minute = models.PositiveIntegerField("분", null=True, blank=True)
     description = models.CharField("설명", max_length=200, blank=True)
+    # 도움(ASSIST) 이벤트가 어느 득점(GOAL)에 연결되는지 명시적으로 가리킨다.
+    # (분 미입력 시 분 기준 추정이 불가능하므로 직접 연결로 정확히 짝짓는다.)
+    goal = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="assists", verbose_name="연결된 득점",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

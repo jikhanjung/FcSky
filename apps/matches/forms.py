@@ -39,13 +39,10 @@ class MatchEventForm(forms.ModelForm):
         if team_players is not None:
             self.fields["player"].queryset = team_players
             self.fields["assist_player"].queryset = team_players
-        # 편집 시: 득점 행에 짝지어진 기존 도움 선수를 초기값으로.
+        # 편집 시: 득점 행에 연결된 기존 도움 선수를 초기값으로(명시적 링크 사용).
         inst = getattr(self, "instance", None)
         if inst and inst.pk and inst.event_type == MatchEvent.EventType.GOAL:
-            assist = inst.match.events.filter(
-                event_type=MatchEvent.EventType.ASSIST,
-                side=inst.side, minute=inst.minute,
-            ).first()
+            assist = inst.assists.first()
             if assist:
                 self.fields["assist_player"].initial = assist.player_id
 
