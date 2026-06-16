@@ -22,7 +22,11 @@ data/
 
 # 개발 문서/기록
 devlog/
+docs/
 *.md
+
+# 호스트용 백업 스크립트(운영/백업 호스트에 별도 배치, 이미지 불필요)
+scripts/
 
 # OS / editor
 .DS_Store
