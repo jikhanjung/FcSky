@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}모든 대회 — FC Sky{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">모든 대회</h1>
+  {% if user.is_staff %}
+    <a href="{% url 'competitions:competition_manage' %}" class="btn btn-outline-secondary btn-sm">대회 관리</a>
+  {% endif %}
+</div>
+
+{% regroup competitions by year as year_groups %}
+{% for group in year_groups %}
+  <h2 class="h5 mt-4 mb-3">{{ group.grouper }}년</h2>
+  <div class="row g-3">
+    {% for c in group.list %}
+      <div class="col-md-6 col-lg-4">
+        <a href="{{ c.get_absolute_url }}" class="text-decoration-none">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <h3 class="h6 mb-0 text-dark">{{ c.name }}</h3>
+                <span class="badge bg-light text-muted border">{{ c.get_kind_display }}</span>
+              </div>
+              {% if c.organizer %}<div class="text-muted small mb-2">{{ c.organizer }}</div>{% endif %}
+              <div class="d-flex flex-wrap gap-1">
+                {% for d in c.divisions.all %}
+                  <span class="badge bg-primary-subtle text-primary">{{ d.label }}</span>
+                {% empty %}
+                  <span class="text-muted small">부문 없음</span>
+                {% endfor %}
+              </div>
+              <div class="text-muted small mt-2">경기 {{ c.match_count }}</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% empty %}
+  <p class="text-muted">등록된 대회가 없습니다.</p>
+{% endfor %}
+{% endblock %}

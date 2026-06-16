@@ -1,5 +1,8 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, Q
-from django.shortcuts import render
+from django.db.models.deletion import ProtectedError
+from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.matches.models import Match, MatchEvent, OpponentMatch
 from apps.matches.services import (
@@ -9,10 +12,13 @@ from apps.matches.services import (
     our_events,
 )
 
+from .forms import CompetitionForm
 from .models import Award, Competition
 
 
 _AGE_ORDER = {"K7": 0, "40": 1, "50": 2}
+
+staff_required = user_passes_test(lambda u: u.is_staff, login_url="login")
 
 
 def _years():
@@ -198,3 +204,102 @@ def year_detail(request, year):
         "recent": recent,
     }
     return render(request, "competitions/year_detail.html", context)
+
+
+# ── 대회 목록 · 상세 (공개 조회: 누구나) ──
+
+def competition_list(request):
+    """모든 대회 목록(연도 내림차순). 누구나 조회 가능."""
+    competitions = (
+        Competition.objects.annotate(
+            division_count=Count("divisions", distinct=True),
+            match_count=Count("matches", distinct=True),
+        ).prefetch_related("divisions").order_by("-year", "name")
+    )
+    return render(request, "competitions/competition_list.html",
+                  {"competitions": competitions})
+
+
+def competition_detail(request, slug):
+    """대회 상세: 부문·출전팀·우리 경기 결과. 누구나 조회 가능."""
+    competition = get_object_or_404(Competition, slug=slug)
+    divisions = competition.divisions.all()
+    entries = (
+        competition.entries.select_related("team", "division").order_by("team__name")
+    )
+    matches = (
+        competition.matches.select_related("our_team", "opponent", "division")
+        .order_by("kickoff")
+    )
+    return render(request, "competitions/competition_detail.html", {
+        "competition": competition,
+        "divisions": divisions,
+        "entries": entries,
+        "matches": matches,
+    })
+
+
+# ── 대회 관리 (staff 전용) ──
+
+@staff_required
+def competition_manage(request):
+    """대회 관리 목록: 생성·수정·삭제 진입."""
+    competitions = (
+        Competition.objects.annotate(
+            division_count=Count("divisions", distinct=True),
+            match_count=Count("matches", distinct=True),
+        ).order_by("-year", "name")
+    )
+    return render(request, "competitions/competition_manage.html",
+                  {"competitions": competitions})
+
+
+@staff_required
+def competition_create(request):
+    if request.method == "POST":
+        form = CompetitionForm(request.POST)
+        if form.is_valid():
+            comp = form.save()
+            messages.success(request, f"대회 '{comp.name}'을(를) 추가했습니다.")
+            return redirect("competitions:competition_manage")
+    else:
+        form = CompetitionForm()
+    return render(request, "competitions/competition_form.html",
+                  {"form": form, "is_create": True})
+
+
+@staff_required
+def competition_edit(request, slug):
+    competition = get_object_or_404(Competition, slug=slug)
+    if request.method == "POST":
+        form = CompetitionForm(request.POST, instance=competition)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"'{competition.name}' 정보를 저장했습니다.")
+            return redirect("competitions:competition_manage")
+    else:
+        form = CompetitionForm(instance=competition)
+    return render(request, "competitions/competition_form.html",
+                  {"form": form, "competition": competition, "is_create": False})
+
+
+@staff_required
+def competition_delete(request, slug):
+    """대회 삭제. 경기가 연결돼 있으면(PROTECT) 막고 안내."""
+    competition = get_object_or_404(Competition, slug=slug)
+    if request.method == "POST":
+        try:
+            name = competition.name
+            competition.delete()
+            messages.success(request, f"대회 '{name}'을(를) 삭제했습니다.")
+            return redirect("competitions:competition_manage")
+        except ProtectedError:
+            messages.error(
+                request,
+                "이 대회에 연결된 경기가 있어 삭제할 수 없습니다. 경기를 먼저 정리하세요.")
+            return redirect("competitions:competition_manage")
+    return render(request, "competitions/competition_confirm_delete.html", {
+        "competition": competition,
+        "match_count": competition.matches.count(),
+        "entry_count": competition.entries.count(),
+    })

@@ -1,0 +1,58 @@
+"""운영진용 대회 편집 폼 (사이트 내 관리)."""
+from django import forms
+from django.utils.text import slugify
+
+from .models import Competition, Division
+
+
+class CompetitionForm(forms.ModelForm):
+    """대회 생성/수정 + 연령 부문(체크박스) 동기화."""
+
+    divisions = forms.MultipleChoiceField(
+        label="부문", choices=Division.AgeGroup.choices, required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="대회에 둘 연령 부문을 선택(없는 대회도 가능).",
+    )
+
+    class Meta:
+        model = Competition
+        fields = ["name", "slug", "kind", "year", "organizer", "description"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "slug": forms.TextInput(attrs={"class": "form-control",
+                                           "placeholder": "URL용 영문 식별자. 비우면 자동"}),
+            "kind": forms.Select(attrs={"class": "form-select"}),
+            "year": forms.NumberInput(attrs={"class": "form-control", "min": 2000, "max": 2100}),
+            "organizer": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
+        if self.instance.pk:
+            self.fields["divisions"].initial = list(
+                self.instance.divisions.values_list("age_group", flat=True))
+
+    def clean_slug(self):
+        # SlugField는 ASCII만 허용. 한글 이름은 slugify 시 비므로 'competition' 폴백 + 중복 회피.
+        slug = (self.cleaned_data.get("slug")
+                or slugify(self.cleaned_data.get("name", "")) or "competition")
+        base, i = slug, 2
+        while Competition.objects.filter(slug=slug).exclude(pk=self.instance.pk or 0).exists():
+            slug, i = f"{base}-{i}", i + 1
+        return slug
+
+    def save(self, commit=True):
+        comp = super().save(commit=commit)
+        if commit:
+            self.sync_divisions(comp)
+        return comp
+
+    def sync_divisions(self, comp):
+        """선택된 부문에 맞춰 Division 행을 생성/삭제(없는 것 추가, 빠진 것 제거)."""
+        selected = set(self.cleaned_data.get("divisions") or [])
+        existing = set(comp.divisions.values_list("age_group", flat=True))
+        for ag in selected - existing:
+            Division.objects.create(competition=comp, age_group=ag)
+        comp.divisions.filter(age_group__in=(existing - selected)).delete()

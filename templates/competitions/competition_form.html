@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{% if is_create %}새 대회{% else %}{{ competition.name }} 수정{% endif %} — 대회 관리{% endblock %}
+{% block content %}
+<h1 class="h4 mb-4">{% if is_create %}새 대회 추가{% else %}대회 수정 — {{ competition.name }}{% endif %}</h1>
+
+<form method="post" class="card shadow-sm">
+  {% csrf_token %}
+  <div class="card-body">
+    {% for field in form %}
+      {% if field.name == "divisions" %}
+        <div class="mb-3">
+          <label class="form-label d-block">{{ field.label }}</label>
+          <div class="d-flex flex-wrap gap-3">
+            {% for cb in field %}
+              <div class="form-check">{{ cb.tag }}
+                <label class="form-check-label" for="{{ cb.id_for_label }}">{{ cb.choice_label }}</label>
+              </div>
+            {% endfor %}
+          </div>
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% else %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <div class="card-footer bg-transparent">
+    <button class="btn btn-primary" type="submit">저장</button>
+    <a href="{% url 'competitions:competition_manage' %}" class="btn btn-outline-secondary">취소</a>
+  </div>
+</form>
+{% endblock %}
