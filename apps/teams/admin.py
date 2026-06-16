@@ -20,10 +20,21 @@ class TeamAdmin(admin.ModelAdmin):
 
 @admin.register(Player)
 class PlayerAdmin(admin.ModelAdmin):
-    list_display = ["name", "squad", "position", "birth_year"]
-    list_filter = ["squad", "position"]
+    """선수(=멤버) 마스터. 모든 사람의 union이며, 팀 소속은 아래 인라인으로 붙인다.
+
+    새 팀원은 여기서 만든 선수를 팀/소속 화면의 autocomplete로 선택해 추가한다
+    (Player를 중복 생성하지 말 것). 중복이 생기면 `manage.py dedupe_members`로 병합.
+    """
+
+    list_display = ["name", "teams_display", "position", "birth_year"]
+    list_filter = ["squad", "position", "memberships__team"]
     search_fields = ["name"]
     inlines = [TeamMembershipInline]
+
+    @admin.display(description="소속 팀")
+    def teams_display(self, obj):
+        names = list(obj.memberships.values_list("team__name", flat=True).distinct())
+        return ", ".join(names) or "—"
 
 
 @admin.register(TeamMembership)
