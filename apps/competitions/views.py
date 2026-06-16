@@ -222,59 +222,65 @@ def competition_list(request):
                   {"competitions": competitions})
 
 
+def _bracket_for(matches, division, opp_sfs, div_to_team_age):
+    """한 부문의 녹아웃 대진(준결승[우리+반대편] → 결승) 구조. 녹아웃 없으면 None."""
+    knockout = [m for m in matches if m.is_knockout]
+    team_age = div_to_team_age.get(division.age_group) if division else None
+    rev_sfs = [o for o in opp_sfs if o.age_group == team_age]
+    our_semis = [m for m in knockout if m.stage == Match.Stage.SEMI]
+    finals = [m for m in knockout if m.stage == Match.Stage.FINAL]
+    if not (knockout or rev_sfs):
+        return None
+    semis = ([{"kind": "match", "obj": m} for m in our_semis]
+             + [{"kind": "opp", "obj": o} for o in rev_sfs])
+    return {"semis": semis, "final": finals[0] if finals else None}
+
+
 def competition_detail(request, slug):
-    """대회 상세: 부문·출전팀 + 조별리그 경기 + 녹아웃 대진표. 누구나 조회 가능."""
+    """대회 상세: 부문이 있으면 부문 탭으로(각 탭에 출전팀·대진표·조별리그). 누구나 조회."""
     competition = get_object_or_404(Competition, slug=slug)
     divisions = list(competition.divisions.all())
-    entries = (
+    entries = list(
         competition.entries.select_related("team", "division").order_by("team__name")
     )
     matches = list(
         competition.matches.select_related("our_team", "opponent", "division")
         .order_by("kickoff")
     )
-
-    group_matches = [m for m in matches if not m.is_knockout]
-    knockout = [m for m in matches if m.is_knockout]
-
-    # 부문(Division.age_group) -> 상대팀 간 경기(OpponentMatch.age_group) 매핑.
     div_to_team_age = {"2030": "K7", "40": "40", "50": "50"}
     opp_sfs = list(
         competition.opponent_matches.filter(stage=Match.Stage.SEMI)
         .select_related("home", "away")
     )
 
-    # 녹아웃 대진표: 부문별 → 단계별(준결승→결승) 열. 준결승 열에는 반대편 준결승도 포함.
-    brackets = []
-    div_order = {d.id: i for i, d in enumerate(divisions)}
-    by_div = {}
-    for m in knockout:
-        by_div.setdefault(m.division_id, []).append(m)
-    for div_id, ms in sorted(by_div.items(), key=lambda kv: div_order.get(kv[0], 99)):
-        division = next((d for d in divisions if d.id == div_id), None)
-        team_age = div_to_team_age.get(division.age_group) if division else None
-        rev_sfs = [o for o in opp_sfs if o.age_group == team_age]
-        stages = {}
-        for m in ms:
-            stages.setdefault(m.stage, []).append(m)
-        # 반대편 준결승은 준결승(SF) 열에 함께 표시(녹아웃이 있는 부문에 한함).
-        if rev_sfs:
-            stages.setdefault(Match.Stage.SEMI, [])
-        columns = []
-        for st in sorted(stages, key=lambda s: Match.STAGE_ORDER.get(s, 0)):
-            columns.append({
-                "label": dict(Match.Stage.choices)[st],
-                "matches": stages[st],
-                "opps": rev_sfs if st == Match.Stage.SEMI else [],
-            })
-        brackets.append({"division": division, "columns": columns})
+    def make_panel(division, ms, es, key, label):
+        return {
+            "key": key,
+            "label": label,
+            "division": division,
+            "entries": es,
+            "group_matches": [m for m in ms if not m.is_knockout],
+            "bracket": _bracket_for(ms, division, opp_sfs, div_to_team_age),
+        }
+
+    panels = []
+    if divisions:
+        for i, d in enumerate(divisions):
+            d_ms = [m for m in matches if m.division_id == d.id]
+            d_es = [e for e in entries if e.division_id == d.id]
+            panels.append(make_panel(d, d_ms, d_es, f"div{d.id}", d.label))
+        # 부문 미지정 경기/출전이 있으면 '기타' 탭.
+        misc_ms = [m for m in matches if m.division_id is None]
+        misc_es = [e for e in entries if e.division_id is None]
+        if misc_ms or misc_es:
+            panels.append(make_panel(None, misc_ms, misc_es, "misc", "기타"))
+    else:
+        panels.append(make_panel(None, matches, entries, "all", "전체"))
 
     return render(request, "competitions/competition_detail.html", {
         "competition": competition,
         "divisions": divisions,
-        "entries": entries,
-        "group_matches": group_matches,
-        "brackets": brackets,
+        "panels": panels,
     })
 
 

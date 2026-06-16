@@ -2,16 +2,41 @@
 {% block title %}{{ competition.name }} — FC Sky{% endblock %}
 {% block extra_head %}
 <style>
-  .bracket { display:flex; gap:1.25rem; overflow-x:auto; padding-bottom:.5rem; }
-  .bracket-col { min-width:13rem; flex:0 0 auto; }
-  .bracket-col-title { font-size:.8rem; font-weight:700; color:var(--bs-secondary);
-                       text-transform:uppercase; letter-spacing:.03em; margin-bottom:.5rem; }
-  .bracket-match { border:1px solid var(--bs-border-color); border-radius:.6rem;
-                   padding:.5rem .6rem; margin-bottom:.85rem; background:var(--bs-body-bg);
-                   text-decoration:none; display:block; }
-  .bracket-row { display:flex; justify-content:space-between; align-items:center; }
-  .bracket-row .nm { font-size:.9rem; }
-  .bracket-row .sc { font-weight:800; font-variant-numeric:tabular-nums; }
+  .ko { display:flex; align-items:stretch; overflow-x:auto; padding:.25rem 0 .75rem;
+        --ko-gap:1.5rem; --ko-line:#9aa6b2; }
+  .ko-col { display:flex; flex-direction:column; justify-content:center; flex:0 0 auto;
+            position:relative; padding-top:1.5rem; }
+  .ko-col--final { margin-left: calc(2 * var(--ko-gap)); }
+  .ko-cell { flex:1; display:flex; align-items:center; position:relative;
+             min-width:13rem; padding:.55rem 0; }
+  .ko-card { display:block; width:100%; border:1px solid var(--bs-border-color);
+             border-radius:.6rem; padding:.5rem .6rem; background:var(--bs-body-bg);
+             text-decoration:none; color:inherit; }
+  .ko-card--final { border-color:#f0c36d; box-shadow:0 0 0 1px #f0c36d33; }
+  .ko-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+  .ko-row .nm { font-size:.9rem; }
+  .ko-row .sc { font-weight:800; font-variant-numeric:tabular-nums; }
+  .ko-meta { display:flex; justify-content:space-between; align-items:center;
+             margin-top:.3rem; }
+
+  /* 연결선: 준결승 2칸 → 결승. 결승은 두 준결승 사이(세로 중앙)에 위치. */
+  .ko--bracket .ko-col--semis .ko-cell::after {
+    content:""; position:absolute; right: calc(-1 * var(--ko-gap));
+    width: var(--ko-gap); height:50%; border-right:2px solid var(--ko-line);
+  }
+  .ko--bracket .ko-col--semis .ko-cell:first-child::after {
+    top:50%; border-top:2px solid var(--ko-line);
+  }
+  .ko--bracket .ko-col--semis .ko-cell:last-child::after {
+    bottom:50%; border-bottom:2px solid var(--ko-line);
+  }
+  .ko--bracket .ko-col--final .ko-cell::before {
+    content:""; position:absolute; left: calc(-1 * var(--ko-gap));
+    width: var(--ko-gap); top:50%; border-top:2px solid var(--ko-line);
+  }
+  .ko-col-title { position:absolute; top:0; left:0; right:0; text-align:center;
+                  font-size:.75rem; font-weight:700; color:var(--bs-secondary);
+                  text-transform:uppercase; letter-spacing:.03em; }
 </style>
 {% endblock %}
 {% block content %}
@@ -37,92 +62,31 @@
 
 {% if competition.description %}<p class="mb-4">{{ competition.description }}</p>{% endif %}
 
-<div class="d-flex flex-wrap gap-2 mb-4">
-  {% for d in divisions %}
-    <span class="badge bg-primary-subtle text-primary fs-6">{{ d.label }}</span>
-  {% empty %}
-    <span class="text-muted">부문 없음</span>
-  {% endfor %}
+<div class="mb-3">
   <a href="{% url 'competitions:standings' %}?competition={{ competition.slug }}"
      class="badge bg-light text-dark border text-decoration-none fs-6">순위표 →</a>
 </div>
 
-<h2 class="h5 mb-3">출전팀</h2>
-<div class="d-flex flex-wrap gap-2 mb-4">
-  {% for e in entries %}
-    <a href="{{ e.team.get_absolute_url }}" class="badge bg-light text-dark border text-decoration-none p-2">
-      {{ e.team.name }}{% if e.division %} <span class="text-muted">· {{ e.division.label }}</span>{% endif %}
-    </a>
-  {% empty %}
-    <span class="text-muted">출전 정보가 없습니다.</span>
-  {% endfor %}
-</div>
-
-{% if brackets %}
-<h2 class="h5 mb-3">녹아웃 대진표</h2>
-{% for b in brackets %}
-  {% if b.division %}<div class="fw-semibold mb-2"><span class="badge bg-primary-subtle text-primary">{{ b.division.label }}</span></div>{% endif %}
-  <div class="bracket mb-4">
-    {% for col in b.columns %}
-      <div class="bracket-col">
-        <div class="bracket-col-title">{{ col.label }}</div>
-        {% for m in col.matches %}
-          <a href="{{ m.get_absolute_url }}" class="bracket-match">
-            <div class="bracket-row">
-              <span class="nm {% if m.result == 'W' %}fw-bold{% endif %}">{{ m.our_team.name }}</span>
-              <span class="sc">{% if m.our_score is not None %}{{ m.our_score }}{% else %}-{% endif %}</span>
-            </div>
-            <div class="bracket-row">
-              <span class="nm {% if m.result == 'L' %}fw-bold{% endif %}">{{ m.opponent.name }}</span>
-              <span class="sc">{% if m.opponent_score is not None %}{{ m.opponent_score }}{% else %}-{% endif %}</span>
-            </div>
-            <div class="text-muted small mt-1">{{ m.kickoff|date:"m/d H:i" }}{% if m.our_score is None %} · {{ m.get_status_display }}{% endif %}</div>
-          </a>
-        {% endfor %}
-        {% for o in col.opps %}
-          <div class="bracket-match">
-            <div class="bracket-row">
-              <span class="nm {% if o.winner and o.winner.id == o.home_id %}fw-bold{% endif %}">{{ o.home.name }}</span>
-              <span class="sc">{% if o.home_score is not None %}{{ o.home_score }}{% else %}-{% endif %}</span>
-            </div>
-            <div class="bracket-row">
-              <span class="nm {% if o.winner and o.winner.id == o.away_id %}fw-bold{% endif %}">{{ o.away.name }}</span>
-              <span class="sc">{% if o.away_score is not None %}{{ o.away_score }}{% else %}-{% endif %}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mt-1">
-              <span class="text-muted small">반대편 준결승</span>
-              {% if user.is_staff %}
-                <a href="{% url 'matches:opponent_edit' o.pk %}?next={{ request.path|urlencode }}" class="btn btn-outline-primary btn-sm py-0">결과 입력</a>
-              {% endif %}
-            </div>
-          </div>
-        {% endfor %}
+{% if panels|length > 1 %}
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    {% for p in panels %}
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if forloop.first %}active{% endif %}" id="tab-{{ p.key }}"
+                data-bs-toggle="tab" data-bs-target="#panel-{{ p.key }}" type="button"
+                role="tab" aria-controls="panel-{{ p.key }}"
+                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">{{ p.label }}</button>
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="tab-content">
+    {% for p in panels %}
+      <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="panel-{{ p.key }}"
+           role="tabpanel" aria-labelledby="tab-{{ p.key }}">
+        {% include "competitions/_competition_panel.html" with p=p %}
       </div>
     {% endfor %}
   </div>
-{% endfor %}
+{% else %}
+  {% include "competitions/_competition_panel.html" with p=panels.0 %}
 {% endif %}
-
-<h2 class="h5 mb-3">조별리그 경기</h2>
-<div class="list-group shadow-sm">
-  {% for m in group_matches %}
-    <a href="{{ m.get_absolute_url }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-      <span>
-        <small class="text-muted me-2">{{ m.kickoff|date:"m/d H:i" }}</small>
-        {{ m.our_team.name }} vs {{ m.opponent.name }}
-        {% if m.division %}<span class="text-muted small">· {{ m.division.label }}</span>{% endif %}
-      </span>
-      <span class="fw-bold">
-        {% if m.our_score is not None %}
-          {% if m.result == "W" %}<span class="text-success">{% elif m.result == "L" %}<span class="text-danger">{% else %}<span class="text-muted">{% endif %}
-          {{ m.our_score }} : {{ m.opponent_score }}</span>
-        {% else %}
-          <span class="badge bg-light text-muted border">{{ m.get_status_display }}</span>
-        {% endif %}
-      </span>
-    </a>
-  {% empty %}
-    <div class="list-group-item text-muted">조별리그 경기가 없습니다.</div>
-  {% endfor %}
-</div>
 {% endblock %}
