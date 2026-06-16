@@ -225,3 +225,8 @@ class MatchVideo(models.Model):
     def embed_url(self):
         vid = self.youtube_id
         return f"https://www.youtube.com/embed/{vid}" if vid else ""
+
+    @property
+    def watch_url(self):
+        vid = self.youtube_id
+        return f"https://www.youtube.com/watch?v={vid}" if vid else self.url

@@ -59,10 +59,14 @@
   {% for v in videos %}
     {% if v.embed_url %}
       <div class="col-12 col-lg-6">
-        {% if v.title %}<div class="fw-semibold mb-1">{{ v.title }}</div>{% endif %}
+        <div class="d-flex justify-content-between align-items-end mb-1">
+          {% if v.title %}<div class="fw-semibold">{{ v.title }}</div>{% else %}<span></span>{% endif %}
+          <a href="{{ v.watch_url }}" target="_blank" rel="noopener" class="small text-decoration-none">유튜브에서 보기 ↗</a>
+        </div>
         <div class="ratio ratio-16x9 rounded shadow-sm overflow-hidden">
           <iframe src="{{ v.embed_url }}" title="{{ v.title|default:'경기 영상' }}"
                   loading="lazy" allowfullscreen
+                  referrerpolicy="strict-origin-when-cross-origin"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>
         </div>
       </div>
