@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.competitions.models import Season
@@ -46,7 +47,7 @@ def team_list(request):
 def team_detail(request, slug):
     team = get_object_or_404(Team, slug=slug)
     memberships = (
-        team.memberships.filter(is_active=True)
+        team.memberships.filter(is_active=True, player__deleted_at__isnull=True)
         .select_related("player")
         .order_by("jersey_number")
     )
@@ -186,3 +187,85 @@ def player_remove(request, slug, pk):
         return redirect(team.get_absolute_url())
     return render(request, "teams/player_confirm_remove.html",
                   {"team": team, "player": player})
+
+
+# ── Player(멤버 마스터) 전체 관리 — 팀과 무관한 선수 레코드 CRUD ──
+
+@staff_required
+def player_manage(request):
+    """모든 Player를 한 화면에서 관리(검색·생성·수정·삭제 진입).
+
+    기본은 활동 선수만. ?deleted=1 이면 삭제(soft delete)된 선수 목록(복구용).
+    """
+    q = (request.GET.get("q") or "").strip()
+    show_deleted = request.GET.get("deleted") == "1"
+    players = (
+        Player.objects.annotate(team_count=Count("memberships__team", distinct=True))
+        .prefetch_related("memberships__team").order_by("name")
+    )
+    players = players.filter(deleted_at__isnull=not show_deleted)
+    if q:
+        players = players.filter(name__icontains=q)
+    return render(request, "teams/player_manage.html", {
+        "players": players, "q": q, "show_deleted": show_deleted,
+        "active_total": Player.objects.filter(deleted_at__isnull=True).count(),
+        "deleted_total": Player.objects.filter(deleted_at__isnull=False).count(),
+    })
+
+
+@staff_required
+def player_create(request):
+    """새 Player 레코드 생성(팀 소속과 무관). 소속은 팀 페이지에서 별도 추가."""
+    if request.method == "POST":
+        form = PlayerForm(request.POST, request.FILES)
+        if form.is_valid():
+            player = form.save()
+            messages.success(request, f"선수 '{player.name}'을(를) 등록했습니다.")
+            return redirect("teams:player_manage")
+    else:
+        form = PlayerForm()
+    return render(request, "teams/player_master_form.html",
+                  {"form": form, "is_create": True})
+
+
+@staff_required
+def player_master_edit(request, pk):
+    """Player 레코드 정보 수정(팀 소속·등번호와 무관)."""
+    player = get_object_or_404(Player, pk=pk)
+    if request.method == "POST":
+        form = PlayerForm(request.POST, request.FILES, instance=player)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"'{player.name}' 정보를 저장했습니다.")
+            return redirect("teams:player_manage")
+    else:
+        form = PlayerForm(instance=player)
+    return render(request, "teams/player_master_form.html",
+                  {"form": form, "player": player, "is_create": False})
+
+
+@staff_required
+def player_master_delete(request, pk):
+    """Player를 soft delete(삭제 표시). 레코드·소속·기록은 보존, 목록·로스터에서만 숨김."""
+    player = get_object_or_404(Player, pk=pk, deleted_at__isnull=True)
+    if request.method == "POST":
+        player.deleted_at = timezone.now()
+        player.save(update_fields=["deleted_at", "updated_at"])
+        messages.success(request, f"선수 '{player.name}'을(를) 삭제했습니다. (복구 가능)")
+        return redirect("teams:player_manage")
+    return render(request, "teams/player_master_confirm_delete.html", {
+        "player": player,
+        "membership_count": player.memberships.count(),
+        "team_names": list(player.memberships.values_list("team__name", flat=True).distinct()),
+    })
+
+
+@staff_required
+def player_restore(request, pk):
+    """soft delete된 Player를 복구."""
+    player = get_object_or_404(Player, pk=pk, deleted_at__isnull=False)
+    if request.method == "POST":
+        player.deleted_at = None
+        player.save(update_fields=["deleted_at", "updated_at"])
+        messages.success(request, f"선수 '{player.name}'을(를) 복구했습니다.")
+    return redirect(f"{reverse('teams:player_manage')}?deleted=1")

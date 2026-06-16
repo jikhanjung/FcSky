@@ -56,6 +56,9 @@ class Player(models.Model):
     photo = models.ImageField("사진", upload_to="players/", blank=True)
     bio = models.TextField("프로필", blank=True)
 
+    # soft delete: 값이 있으면 삭제된 것으로 간주(레코드·기록은 보존, 목록에서 숨김).
+    deleted_at = models.DateTimeField("삭제 일시", null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -66,6 +69,10 @@ class Player(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
 
     def get_absolute_url(self):
         return reverse("teams:player", kwargs={"pk": self.pk})

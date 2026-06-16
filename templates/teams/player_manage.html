@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}선수(멤버) 관리{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">선수(멤버) 관리</h1>
+  <a href="{% url 'teams:player_create' %}" class="btn btn-primary btn-sm">+ 새 선수</a>
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <form method="get" class="d-flex gap-2">
+    {% if show_deleted %}<input type="hidden" name="deleted" value="1">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="이름 검색"
+           class="form-control form-control-sm" style="max-width:14rem">
+    <button class="btn btn-outline-secondary btn-sm" type="submit">검색</button>
+  </form>
+  <div class="ms-auto btn-group btn-group-sm" role="group">
+    <a href="{% url 'teams:player_manage' %}"
+       class="btn {% if not show_deleted %}btn-secondary{% else %}btn-outline-secondary{% endif %}">활동 {{ active_total }}</a>
+    <a href="{% url 'teams:player_manage' %}?deleted=1"
+       class="btn {% if show_deleted %}btn-secondary{% else %}btn-outline-secondary{% endif %}">삭제됨 {{ deleted_total }}</a>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>이름</th><th>포지션</th><th>출생</th><th>소속 팀</th><th class="text-end">관리</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in players %}
+      <tr>
+        <td>
+          <a href="{% url 'teams:player' p.pk %}" class="text-decoration-none">{{ p.name }}</a>
+          {% if p.squad %}<span class="badge bg-light text-muted ms-1">{{ p.squad }}</span>{% endif %}
+        </td>
+        <td>{{ p.get_position_display|default:"—" }}</td>
+        <td>{{ p.birth_year|default:"—" }}</td>
+        <td class="small text-muted">
+          {% for m in p.memberships.all %}{{ m.team.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+        </td>
+        <td class="text-end text-nowrap">
+          {% if show_deleted %}
+            <span class="text-muted small me-2">{{ p.deleted_at|date:"y-m-d" }} 삭제</span>
+            <form method="post" action="{% url 'teams:player_restore' p.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button class="btn btn-outline-success btn-sm py-0" type="submit">복구</button>
+            </form>
+          {% else %}
+            <a href="{% url 'teams:player_master_edit' p.pk %}" class="btn btn-outline-secondary btn-sm py-0">수정</a>
+            <a href="{% url 'teams:player_master_delete' p.pk %}" class="btn btn-outline-danger btn-sm py-0">삭제</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-muted py-4">
+        {% if show_deleted %}삭제된 선수가 없습니다.{% else %}선수가 없습니다.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

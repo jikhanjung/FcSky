@@ -84,7 +84,7 @@ class MembershipAddForm(forms.ModelForm):
         self.season = season
         self.fields["player"].label = "선수 선택"
         self.fields["player"].empty_label = "— 선수 선택 —"
-        qs = Player.objects.order_by("name")
+        qs = Player.objects.filter(deleted_at__isnull=True).order_by("name")
         if team is not None:
             taken = TeamMembership.objects.filter(
                 team=team, season=season).values_list("player_id", flat=True)
