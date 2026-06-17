@@ -10,8 +10,12 @@ class Team(models.Model):
         FORTIES = "40", "40대"
         FIFTIES = "50", "50대"
 
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="teams",
+        verbose_name="클럽", null=True, blank=True,
+    )
     name = models.CharField("팀 이름", max_length=100)
-    slug = models.SlugField("URL 슬러그", max_length=120, unique=True)
+    slug = models.SlugField("URL 슬러그", max_length=120)
     age_group = models.CharField(
         "연령대", max_length=4, choices=AgeGroup.choices
     )
@@ -26,6 +30,7 @@ class Team(models.Model):
         verbose_name = "팀"
         verbose_name_plural = "팀"
         ordering = ["age_group", "name"]
+        unique_together = [("club", "slug")]
 
     def __str__(self):
         return self.name
@@ -43,6 +48,10 @@ class Player(models.Model):
         MF = "MF", "미드필더"
         FW = "FW", "공격수"
 
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="players",
+        verbose_name="클럽", null=True, blank=True,
+    )
     name = models.CharField("이름", max_length=50)
     birth_year = models.PositiveIntegerField("출생 연도", null=True, blank=True)
     position = models.CharField(

@@ -23,9 +23,13 @@ def extract_youtube_id(url):
 
 
 class Opponent(models.Model):
-    """상대팀 (외부 팀)."""
+    """상대팀 (외부 팀). 클럽별로 자기 상대팀 목록을 관리."""
 
-    name = models.CharField("팀명", max_length=120, unique=True)
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="opponents",
+        verbose_name="클럽", null=True, blank=True,
+    )
+    name = models.CharField("팀명", max_length=120)
     short_name = models.CharField("약칭", max_length=40, blank=True)
     logo = models.ImageField("로고", upload_to="opponents/logos/", blank=True)
 
@@ -33,6 +37,7 @@ class Opponent(models.Model):
         verbose_name = "상대팀"
         verbose_name_plural = "상대팀"
         ordering = ["name"]
+        unique_together = [("club", "name")]
 
     def __str__(self):
         return self.name
@@ -60,6 +65,10 @@ class Match(models.Model):
     STAGE_ORDER = {"GROUP": 0, "RO16": 1, "QF": 2, "SF": 3, "3RD": 4, "F": 5}
     KNOCKOUT_STAGES = {"RO16", "QF", "SF", "3RD", "F"}
 
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="matches",
+        verbose_name="클럽", null=True, blank=True,
+    )
     our_team = models.ForeignKey(
         "teams.Team", on_delete=models.CASCADE, related_name="matches",
         verbose_name="우리 팀",
@@ -147,6 +156,10 @@ class OpponentMatch(models.Model):
     조 순위표를 완성하기 위한 보정용. 부문(age_group)으로 어느 조에 속하는지 구분한다.
     """
 
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="opponent_matches",
+        verbose_name="클럽", null=True, blank=True,
+    )
     competition = models.ForeignKey(
         "competitions.Competition", on_delete=models.CASCADE,
         related_name="opponent_matches", verbose_name="대회",

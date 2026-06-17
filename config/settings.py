@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # FC Sky apps
+    'apps.clubs',
     'apps.teams',
     'apps.competitions',
     'apps.matches',

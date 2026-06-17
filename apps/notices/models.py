@@ -5,6 +5,10 @@ from django.urls import reverse
 class Notice(models.Model):
     """공지사항."""
 
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="notices",
+        verbose_name="클럽", null=True, blank=True,
+    )
     title = models.CharField("제목", max_length=200)
     body = models.TextField("내용")
     is_pinned = models.BooleanField("상단 고정", default=False)

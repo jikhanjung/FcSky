@@ -110,6 +110,10 @@ class CompetitionEntry(models.Model):
 class Award(models.Model):
     """입상/수상 내역 (팀 또는 선수 단위)."""
 
+    club = models.ForeignKey(
+        "clubs.Club", on_delete=models.CASCADE, related_name="awards",
+        verbose_name="클럽", null=True, blank=True,
+    )
     title = models.CharField("수상명", max_length=120, help_text="예: 우승, 준우승, 득점왕")
     competition = models.ForeignKey(
         Competition, on_delete=models.CASCADE, related_name="awards",

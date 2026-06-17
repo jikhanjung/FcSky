@@ -59,7 +59,8 @@
 
 > 단일 클럽(FC Sky) → 여러 클럽 SaaS. 최소 전환 계획: `devlog/20260617_P03_SaaS_멀티테넌트_전환계획.md`.
 
-- [ ] A. 테넌트 모델 + backfill (`Club`·`ClubMembership`, 루트 모델 `club` FK, 복합 unique)
+- [x] A. 테넌트 모델 + backfill (`Club`·`ClubMembership`, 8개 모델 `club` FK, fcsky backfill — devlog 053)
+      · Competition/Division 은 공유(참가는 CompetitionEntry), Opponent 는 클럽별
 - [ ] B. 라우팅 + 스코핑 (미들웨어 `request.club`, `/<slug>/` 하위화, 쿼리 필터)
 - [ ] C. 권한 + 온보딩 (클럽별 staff, 클럽 생성·초대 최소 화면)
 - [ ] D. 브랜딩 분리 (context processor 로 'FC Sky' 하드코딩 제거)
