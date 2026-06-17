@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}준결승 결과 입력 — {{ om.home }} vs {{ om.away }}{% endblock %}
+{% block title %}경기 결과 입력 — {{ om.home_entry.name }} vs {{ om.away_entry.name }}{% endblock %}
 {% block content %}
 <h1 class="h4 mb-1">상대팀 간 경기 결과 입력</h1>
 <p class="text-muted small mb-4">
-  {{ om.competition.name }} · {{ om.get_age_group_display }}
+  {{ om.competition.name }}{% if om.division %} · {{ om.division.label }}{% endif %}
   {% if om.stage != "GROUP" %} · {{ om.get_stage_display }}{% endif %}
   <br>이 경기의 승자가 연결된 결승의 상대로 자동 기입됩니다.
 </p>
@@ -14,12 +14,12 @@
   <div class="card-body">
     <div class="row g-3 align-items-end">
       <div class="col-5 text-center">
-        <label class="form-label fw-semibold">{{ om.home }}</label>
+        <label class="form-label fw-semibold">{{ om.home_entry.name }}</label>
         {{ form.home_score }}
       </div>
       <div class="col-2 text-center text-muted fw-bold pb-2">vs</div>
       <div class="col-5 text-center">
-        <label class="form-label fw-semibold">{{ om.away }}</label>
+        <label class="form-label fw-semibold">{{ om.away_entry.name }}</label>
         {{ form.away_score }}
       </div>
     </div>
