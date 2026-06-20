@@ -5,6 +5,7 @@ from apps.clubs.models import Club
 from apps.matches.models import Match, Opponent
 from apps.teams.models import Team
 
+from .forms import CompetitionForm
 from .models import Competition, CompetitionEntry, Division
 
 
@@ -55,3 +56,46 @@ class StandingsTest(TestCase):
         b = next(r for r in table if r["name"] == "B")
         # 우리전 + A전 = 2경기 (상대팀 간 경기 포함됨)
         self.assertEqual(b["p"], 2)
+
+
+class CompetitionFormHalfLengthTest(TestCase):
+    """대회 편집 폼: 대회 전후반 길이 저장 + 부문 길이 오버라이드는 폼에서 안 건드림."""
+
+    def _data(self, **over):
+        data = {
+            "name": "컵", "slug": "cup", "kind": Competition.Kind.TOURNAMENT,
+            "year": 2026, "half_length_minutes": 30,
+            "organizer": "", "description": "",
+            "divisions": ["2030", "50"],
+        }
+        data.update(over)
+        return data
+
+    def test_saves_competition_half_length(self):
+        form = CompetitionForm(self._data())
+        self.assertTrue(form.is_valid(), form.errors)
+        comp = form.save()
+        self.assertEqual(comp.half_length_minutes, 30)
+        # 폼은 부문별 오버라이드를 노출하지 않으므로 신규 부문은 길이 미설정(=대회값 사용).
+        self.assertIsNone(comp.divisions.get(age_group="50").half_length_minutes)
+
+    def test_form_has_no_division_override_fields(self):
+        form = CompetitionForm(self._data())
+        self.assertNotIn("half_min_50", form.fields)
+        self.assertNotIn("half_min_2030", form.fields)
+
+    def test_resync_preserves_admin_set_division_length(self):
+        """Admin 등에서 설정한 부문 길이는 폼 재저장 시 보존."""
+        form = CompetitionForm(self._data())
+        comp = form.save()
+        d50 = comp.divisions.get(age_group="50")
+        d50.half_length_minutes = 25   # Admin 에서 설정했다고 가정
+        d50.save()
+        # 같은 부문 구성으로 폼 재저장.
+        CompetitionForm(self._data(), instance=comp).save()
+        d50.refresh_from_db()
+        self.assertEqual(d50.half_length_minutes, 25)        # 보존됨
+        # 경기 적용 길이: 부문 오버라이드 우선.
+        m = Match(club=Club.objects.create(name="K", slug="k"),
+                  competition=comp, division=d50)
+        self.assertEqual(m.half_length_minutes, 25)

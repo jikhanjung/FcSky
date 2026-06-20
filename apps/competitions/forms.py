@@ -16,13 +16,16 @@ class CompetitionForm(forms.ModelForm):
 
     class Meta:
         model = Competition
-        fields = ["name", "slug", "kind", "year", "organizer", "description"]
+        fields = ["name", "slug", "kind", "year", "half_length_minutes",
+                  "organizer", "description"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "slug": forms.TextInput(attrs={"class": "form-control",
                                            "placeholder": "URL용 영문 식별자. 비우면 자동"}),
             "kind": forms.Select(attrs={"class": "form-select"}),
             "year": forms.NumberInput(attrs={"class": "form-control", "min": 2000, "max": 2100}),
+            "half_length_minutes": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1, "max": 90}),
             "organizer": forms.TextInput(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
@@ -30,6 +33,9 @@ class CompetitionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
+        self.fields["half_length_minutes"].help_text = (
+            "전·후반 한 쪽 길이. 중계 콘솔 시계·후반 시작점 기준.")
+        # 부문별 길이 오버라이드는 드물어 폼에서 노출하지 않음(필요 시 Admin에서 편집).
         if self.instance.pk:
             self.fields["divisions"].initial = list(
                 self.instance.divisions.values_list("age_group", flat=True))
@@ -50,7 +56,10 @@ class CompetitionForm(forms.ModelForm):
         return comp
 
     def sync_divisions(self, comp):
-        """선택된 부문에 맞춰 Division 행을 생성/삭제(없는 것 추가, 빠진 것 제거)."""
+        """선택된 부문에 맞춰 Division 행을 생성/삭제(없는 것 추가, 빠진 것 제거).
+
+        기존 부문의 길이 오버라이드(half_length_minutes)는 건드리지 않는다(Admin 편집 보존).
+        """
         selected = set(self.cleaned_data.get("divisions") or [])
         existing = set(comp.divisions.values_list("age_group", flat=True))
         for ag in selected - existing:
