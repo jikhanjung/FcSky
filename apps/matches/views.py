@@ -336,11 +336,13 @@ def _handle_live_action(request, match, team_players):
     score_changed = False
 
     if action == "start":
+        # 예정 상태에서 새로 시작하면 시작시각을 다시 세팅(이전 LIVE 흔적 무시).
+        # 종료(FINISHED) 후 재개는 기존 시각을 보존해 자동 시계 연속성 유지.
+        fresh_start = match.status == Match.Status.SCHEDULED
         match.status = Match.Status.LIVE
         # 'LIVE 시작'을 누른 시각을 자동 시계 기준으로 고정(킥오프와 무관).
-        # 이미 기록돼 있으면 보존(종료 후 재개 시 시계 연속성 유지).
         fields = ["status", "updated_at"]
-        if match.live_started_at is None:
+        if fresh_start or match.live_started_at is None:
             match.live_started_at = timezone.now()
             fields.append("live_started_at")
         match.save(update_fields=fields)
