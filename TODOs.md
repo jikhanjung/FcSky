@@ -36,8 +36,13 @@
 - [x] **경기 LIVE 상태 + MatchEvent 실시간 입력(운영진 모바일 콘솔 `/matches/<pk>/live/`)**
 - [x] **라이브 스코어보드 / 타임라인 자동 갱신 — 폴링(`live.json`, 3초 주기)**
   - WebSocket/Redis 미도입(단일 컨테이너·WSGI 유지). 데이터 계약은 추후 WS 교체 가능.
+- [x] **출전 명단(MatchLineup) + 중계 콘솔 무새로고침(fetch)** — 콘솔 액션 fetch 기반,
+      선수 타일·교체 IN/OUT 명단 연동(`/matches/<pk>/lineup/`)
+- [x] **전후반 구분 + 길이 설정 + 시계 일시정지** (v0.6.2, devlog 066)
+  - 단계 진행(전반→하프타임→후반→종료), 후반 이어가기 시계, 이벤트 전/후반 태깅
+  - 전후반 길이: 대회(Competition) 기본값 + 부문(Division) 오버라이드, 대회 편집 폼에서 설정
+  - 시계 일시정지/재개(하프 유지한 채 동결, 누적 정지 보정)
 - [ ] (확장) Django Channels + Redis → WebSocket 푸시 전환
-- [ ] (확장) 교체 IN/OUT 라인업 연동, 중계 콘솔 무새로고침(fetch)
 
 ## 🚀 Phase 5 — 배포 & 운영
 
@@ -57,6 +62,8 @@
   - [x] 신규 인스턴스 백업 — dolfinid hourly cron + m710q daily pull(`backup-fcmanager.sh`) 모두 적용 완료(2026-06-17).
   - [ ] 레거시 fcsky 폐기 시점·절차 결정
 - [x] 관리자 계정 비밀번호 교체 (2026-06-17, 운영 `admin` 비번 변경 완료)
+- [x] 버전 관리 단일소스화 (fsis2026 패턴) — `config/version.py` + `deploy/build.sh X.Y.Z`
+      (test→bump/commit→build `:X.Y.Z`·`:latest`→push). 0.6.2부터 적용 (devlog 066)
 
 ## ✅ Phase 6 — 멀티테넌트 SaaS 전환 (A~D 완료)
 
