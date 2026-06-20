@@ -80,5 +80,7 @@
 ## 🧹 기술 부채 / 개선 메모
 
 - [~] 테스트 코드 작성 (모델·뷰) — 기본 스모크/단위 테스트 완료, 커버리지 확대 필요
-- [ ] 운영 설정 분리 (`settings/base.py`, `dev.py`, `prod.py` 또는 환경변수)
+- [x] 운영 설정 분리 — **환경변수 방식** 채택(단일 `settings.py` + `DJANGO_*` 주입,
+      파일 분리 불필요). 운영(비 DEBUG) 보안 블록 추가: `SESSION_COOKIE_SECURE`·
+      `CSRF_COOKIE_SECURE`. HTTPS 리다이렉트·HSTS 는 nginx 담당(devlog 063)이라 Django 측 비설정.
 - [ ] 로고 투명 배경 PNG 버전 확보 시 교체

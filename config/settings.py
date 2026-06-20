@@ -52,6 +52,16 @@ APP_VERSION = os.environ.get('APP_VERSION') or _VERSION
 # 리버스 프록시(nginx) 뒤에서 HTTPS 종단 시 원본 스킴 인식(보안 쿠키·CSRF용).
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# 운영(비 DEBUG) 보안 강화.
+# 역할 분담: HTTP→HTTPS 301 리다이렉트·HSTS 는 nginx 가 담당(devlog 063)하므로
+# 여기서 중복 설정하지 않는다(Django 측 SECURE_SSL_REDIRECT 를 켜면 deploy.sh 의
+# 직결 HTTP 헬스체크가 301 로 바뀌어 실효성이 떨어진다). 앱 레벨에서만 보강 가능한
+# 쿠키 Secure 플래그를 켠다 — nginx 의 X-Forwarded-Proto=https 전달이 전제(위 헤더).
+# X-Content-Type-Options(nosniff)·X-Frame-Options(DENY)·Referrer-Policy 는 Django 기본값으로 이미 적용됨.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True   # 세션 쿠키는 HTTPS 에서만 전송
+    CSRF_COOKIE_SECURE = True      # CSRF 쿠키도 HTTPS 전용
+
 
 # Application definition
 
