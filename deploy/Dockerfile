@@ -2,8 +2,9 @@
 # 빌드는 프로젝트 루트를 컨텍스트로:  docker build -f deploy/Dockerfile -t honestjung/fcmanager:0.5.7 .
 FROM python:3.12-slim
 
-# 릴리스 버전(단일 소스). 이 값을 올리면 LABEL·런타임 ENV·navbar 표시가 함께 바뀐다.
-ARG APP_VERSION=0.6.2
+# 릴리스 버전 단일 소스는 config/version.py. build.sh 가 그 값을 --build-arg 로 넘겨
+# LABEL·런타임 ENV 에 반영한다(미지정 시 settings 가 version.py 를 직접 읽음).
+ARG APP_VERSION=
 
 LABEL org.opencontainers.image.title="FCManager" \
       org.opencontainers.image.description="FCManager — 축구 클럽 관리 SaaS (Django)" \
