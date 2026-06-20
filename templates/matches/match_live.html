@@ -39,6 +39,7 @@
 <div data-pk="{{ match.pk }}"
      data-status="{{ match.status }}"
      data-period="{{ match.period }}"
+     data-paused="{% if match.paused_at %}1{% endif %}"
      data-half-length="{{ half_length }}"
      data-our="{{ match.our_score|default:0 }}"
      data-opp="{{ match.opponent_score|default:0 }}"
@@ -54,7 +55,10 @@
                 title="탭하여 경기 시간 보정">--:--</button>
         <div class="small text-muted lh-1">전후반 {{ half_length }}분</div>
       </div>
-      <button id="toggle-btn" class="btn btn-sm"></button>
+      <div class="d-flex gap-1">
+        <button id="pause-btn" type="button" class="btn btn-sm d-none"></button>
+        <button id="toggle-btn" class="btn btn-sm"></button>
+      </div>
     </div>
   </div>
 
@@ -147,10 +151,11 @@
   var manualOffset = 0;                      // 운영자 수동 보정 누적(초)
   function nowMs(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
   var anchorPerf = nowMs();
-  // 시계는 전반·후반 진행 중에만 흐른다(하프타임·종료·시작 전엔 정지).
+  function paused(){ return root.dataset.paused === '1'; }
+  // 시계는 전반·후반 진행 중에만 흐른다(하프타임·종료·시작 전·일시정지 시 정지).
   function running(){
     var p = root.dataset.period;
-    return p === 'FIRST' || p === 'SECOND';
+    return (p === 'FIRST' || p === 'SECOND') && !paused();
   }
 
   // 현재 경과 초(킥오프 기준). LIVE일 때만 흐른다.
@@ -318,14 +323,29 @@
     postAction({ action: st.action });
   });
 
+  // 일시정지 / 재개 버튼 (전·후반 진행 중에만 노출)
+  document.getElementById('pause-btn').addEventListener('click', function () {
+    postAction({ action: paused() ? 'resume' : 'pause' });
+  });
+
   // ── 상태 렌더 ──
   function renderStatusBar() {
     var p = root.dataset.period || 'SCHEDULED';
     var st = STAGE[p] || STAGE.SCHEDULED;
-    document.getElementById('status-badge').innerHTML =
-      PERIOD_BADGE[p] || PERIOD_BADGE.SCHEDULED;
+    var inHalf = (p === 'FIRST' || p === 'SECOND');
+    document.getElementById('status-badge').innerHTML = paused() && inHalf
+      ? '<span class="badge bg-secondary">⏸ 일시정지</span>'
+      : (PERIOD_BADGE[p] || PERIOD_BADGE.SCHEDULED);
     var tb = document.getElementById('toggle-btn');
     tb.textContent = st.label; tb.className = st.cls;
+    // 일시정지 버튼: 진행 중에만 보이고, 정지 여부에 따라 라벨/색 전환.
+    var pb = document.getElementById('pause-btn');
+    pb.classList.toggle('d-none', !inHalf);
+    if (paused()) {
+      pb.textContent = '▶ 재개'; pb.className = 'btn btn-sm btn-success';
+    } else {
+      pb.textContent = '⏸ 일시정지'; pb.className = 'btn btn-sm btn-outline-secondary';
+    }
   }
 
   function renderRecent(timeline) {
@@ -356,6 +376,7 @@
     if (!data) return;
     root.dataset.status = data.status;
     if (data.period) root.dataset.period = data.period;
+    root.dataset.paused = data.paused ? '1' : '';
     document.getElementById('our-score').textContent = data.our_score == null ? 0 : data.our_score;
     document.getElementById('opp-score').textContent = data.opponent_score == null ? 0 : data.opponent_score;
     syncClock(data.elapsed_seconds);

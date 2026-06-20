@@ -180,27 +180,30 @@ def _elapsed_seconds(match):
     전반: now - 전반 시작시각. 하프타임: 전후반 길이에서 정지.
     후반: 전후반 길이 + (now - 후반 시작시각) — 전반 길이부터 이어서 흐른다.
     종료: 후반까지 했으면 풀타임(길이×2), 아니면 길이. 시작 전엔 킥오프 카운트다운 폴백.
+    일시정지 중이면 멈춘 시각 기준으로, 현재 하프 누적 정지 시간(paused_seconds)을 뺀다.
     """
     P = Match.Period
     half = match.half_length_seconds
-    now = timezone.now()
+    # 정지 중이면 멈춘 시각을, 아니면 현재 시각을 기준으로 한다.
+    ref = match.paused_at or timezone.now()
     if match.period == P.FIRST:
         if not match.live_started_at:
             return None
-        return int((now - match.live_started_at).total_seconds())
+        return int((ref - match.live_started_at).total_seconds()) - match.paused_seconds
     if match.period == P.HALFTIME:
         return half
     if match.period == P.SECOND:
         if not match.second_half_started_at:
             return half
-        return half + int((now - match.second_half_started_at).total_seconds())
+        return (half + int((ref - match.second_half_started_at).total_seconds())
+                - match.paused_seconds)
     if match.period == P.FINISHED:
         return half * 2 if match.second_half_started_at else half
     # 시작 전(SCHEDULED): 킥오프가 있으면 카운트다운용 경과(음수 가능), 없으면 None.
     base = match.live_started_at or match.kickoff
     if not base:
         return None
-    return int((now - base).total_seconds())
+    return int((timezone.now() - base).total_seconds())
 
 
 def _live_payload(match):
@@ -211,6 +214,7 @@ def _live_payload(match):
         "is_live": match.status == Match.Status.LIVE,
         "period": match.period,
         "period_display": match.get_period_display(),
+        "paused": match.paused_at is not None,
         "half_length": match.half_length_minutes,
         "our_score": match.our_score,
         "opponent_score": match.opponent_score,
@@ -374,25 +378,45 @@ def _handle_live_action(request, match, team_players):
         match.period = Match.Period.FIRST
         match.live_started_at = timezone.now()
         match.second_half_started_at = None
+        match.paused_at = None
+        match.paused_seconds = 0
         match.save(update_fields=["status", "period", "live_started_at",
-                                  "second_half_started_at", "updated_at"])
+                                  "second_half_started_at", "paused_at",
+                                  "paused_seconds", "updated_at"])
         messages.success(request, "전반을 시작했습니다.")
     elif action == "halftime":
         match.period = Match.Period.HALFTIME
-        match.save(update_fields=["period", "updated_at"])
+        match.paused_at = None
+        match.save(update_fields=["period", "paused_at", "updated_at"])
         messages.success(request, "하프타임입니다.")
     elif action == "start_second":
         # 후반 시작: 후반 시계 = 전후반 길이 + (now - 이 시각). 전반 길이부터 이어서 흐른다.
         match.status = Match.Status.LIVE
         match.period = Match.Period.SECOND
         match.second_half_started_at = timezone.now()
-        match.save(update_fields=["status", "period",
-                                  "second_half_started_at", "updated_at"])
+        match.paused_at = None
+        match.paused_seconds = 0
+        match.save(update_fields=["status", "period", "second_half_started_at",
+                                  "paused_at", "paused_seconds", "updated_at"])
         messages.success(request, "후반을 시작했습니다.")
+    elif action == "pause":
+        # 일시정지: 진행 중(전·후반)일 때만. 멈춘 시각을 기록해 시계를 동결.
+        if match.period in (Match.Period.FIRST, Match.Period.SECOND) and not match.paused_at:
+            match.paused_at = timezone.now()
+            match.save(update_fields=["paused_at", "updated_at"])
+            messages.success(request, "시계를 일시정지했습니다.")
+    elif action == "resume":
+        # 재개: 멈춰 있던 시간을 누적 정지에 더하고 시계를 다시 흐르게 한다.
+        if match.paused_at:
+            match.paused_seconds += int((timezone.now() - match.paused_at).total_seconds())
+            match.paused_at = None
+            match.save(update_fields=["paused_at", "paused_seconds", "updated_at"])
+            messages.success(request, "시계를 재개했습니다.")
     elif action == "finish":
         match.status = Match.Status.FINISHED
         match.period = Match.Period.FINISHED
-        match.save(update_fields=["status", "period", "updated_at"])
+        match.paused_at = None
+        match.save(update_fields=["status", "period", "paused_at", "updated_at"])
         messages.success(request, "경기를 종료했습니다.")
     elif action == "goal":
         side = request.POST.get("side") or MatchEvent.Side.OUR

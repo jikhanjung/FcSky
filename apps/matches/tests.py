@@ -130,6 +130,52 @@ class LivePeriodTest(TestCase):
         goal = match.events.get(event_type=MatchEvent.EventType.GOAL)
         self.assertEqual(goal.half, 2)
 
+    def test_pause_freezes_clock_at_paused_moment(self):
+        """일시정지 중엔 멈춘 시각 기준으로 시계가 동결(이후 시간 흘러도 그대로)."""
+        now = timezone.now()
+        match = self._match(status=Match.Status.LIVE, period=Match.Period.FIRST,
+                            live_started_at=now - timedelta(minutes=20),
+                            paused_at=now - timedelta(minutes=5))
+        # 멈춘 시각 기준 경과 = 20분 - 5분 = 15분(현재 시각과 무관).
+        self.assertAlmostEqual(_elapsed_seconds(match), 15 * 60, delta=60)
+
+    def test_pause_action_only_while_in_half(self):
+        """일시정지는 전·후반 진행 중에만 동작(하프타임 땐 무시)."""
+        live = self._match(status=Match.Status.LIVE, period=Match.Period.FIRST,
+                           live_started_at=timezone.now() - timedelta(minutes=3))
+        self._act(live, action="pause")
+        live.refresh_from_db()
+        self.assertIsNotNone(live.paused_at)
+
+        ht = self._match(status=Match.Status.LIVE, period=Match.Period.HALFTIME,
+                         live_started_at=timezone.now() - timedelta(minutes=40))
+        self._act(ht, action="pause")
+        ht.refresh_from_db()
+        self.assertIsNone(ht.paused_at)
+
+    def test_resume_accumulates_paused_time(self):
+        """재개하면 멈춰 있던 시간이 누적 정지에 더해지고 시계가 이어서 흐른다."""
+        now = timezone.now()
+        match = self._match(status=Match.Status.LIVE, period=Match.Period.FIRST,
+                            live_started_at=now - timedelta(minutes=20),
+                            paused_at=now - timedelta(minutes=5))
+        self._act(match, action="resume")
+        match.refresh_from_db()
+        self.assertIsNone(match.paused_at)
+        self.assertGreaterEqual(match.paused_seconds, 4 * 60)
+        # 재개 직후 경과 = 20분 - 약 5분 = 약 15분.
+        self.assertAlmostEqual(_elapsed_seconds(match), 15 * 60, delta=60)
+
+    def test_start_half_clears_pause_state(self):
+        """후반 시작은 전반의 정지 누적을 초기화한다."""
+        match = self._match(status=Match.Status.LIVE, period=Match.Period.FIRST,
+                            live_started_at=timezone.now() - timedelta(minutes=20),
+                            paused_seconds=120)
+        self._act(match, action="start_second")
+        match.refresh_from_db()
+        self.assertEqual(match.paused_seconds, 0)
+        self.assertIsNone(match.paused_at)
+
 
 class HalfLengthResolutionTest(TestCase):
     """전후반 길이 해석: 부문(Division) 오버라이드 → 대회 기본값."""

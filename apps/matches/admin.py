@@ -72,7 +72,8 @@ class MatchAdmin(admin.ModelAdmin):
         }),
         ("중계 진행", {
             "classes": ("collapse",),
-            "fields": ("period", ("live_started_at", "second_half_started_at")),
+            "fields": ("period", ("live_started_at", "second_half_started_at"),
+                       ("paused_at", "paused_seconds")),
             "description": "중계 콘솔이 자동으로 채운다. 보정이 필요할 때만 직접 수정.",
         }),
         ("대진 자동 진행(녹아웃)", {

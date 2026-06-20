@@ -127,6 +127,10 @@ class Match(models.Model):
     live_started_at = models.DateTimeField("전반 시작 시각", null=True, blank=True)
     # '후반 시작'을 누른 실제 시각. 후반 시계 = 전후반 길이 + (now - 이 시각).
     second_half_started_at = models.DateTimeField("후반 시작 시각", null=True, blank=True)
+    # 시계 일시정지: 멈춘 시각(정지 중이면 not-null) + 현재 하프에서 누적 정지 초.
+    # 하프 시계에서 paused_seconds 를 빼서 정지 시간만큼 시계가 멈춘 듯 보이게 한다.
+    paused_at = models.DateTimeField("일시정지 시각", null=True, blank=True)
+    paused_seconds = models.PositiveIntegerField("누적 정지(초)", default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
