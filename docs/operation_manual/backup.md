@@ -48,7 +48,7 @@ fsis2026 대비 단순화: ghdb·분류 JSON 트랙 없음, DB 가 작아(<5MB) 
 
 - **스크립트**: `/srv/fcmanager/scripts/backup_db.py` (repo `scripts/backup_db.py` 를 배치)
 - **방식**: SQLite **online backup API** — 컨테이너가 DB 에 쓰는 중에도 안전.
-- **트랙**: `fcsky`(/srv/fcmanager/db.sqlite3) + `dolfinid_nginx`(/etc/nginx/sites-available/, 권한 없으면 skip).
+- **트랙**: `fcmanager`(/srv/fcmanager/db.sqlite3) + `dolfinid_nginx`(/etc/nginx/sites-available/, 권한 없으면 skip).
 - **retention**: `RETAIN_COUNT=12` (최근 12시간).
 - **디스크 가드**: `MIN_FREE_GB=2` 미만이면 abort + ERROR 로그 + exit 1.
 - `HH` 는 **UTC** 시각. 예: `fcmanager_20260616_00.sqlite3` = 06-16 09:00 KST.

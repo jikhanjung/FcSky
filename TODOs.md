@@ -58,7 +58,7 @@
 - [x] `SECRET_KEY`/`DEBUG`/`ALLOWED_HOSTS` 환경변수 분리 (운영 키 지정은 배포 시)
 - [ ] ~~PostgreSQL 전환~~ — 당분간 보류. SQLite DB는 호스트 파일(볼륨)로 영속화되어 유실 위험 없음.
 - [x] 미디어 파일 — `media/` 디렉토리 유지 + 백업으로 보호 (볼륨/S3 전환은 보류)
-- [x] **백업 체계** — 운영 hourly(`backup_db.py`) + m710q daily pull(`backup-fcsky.sh`).
+- [x] **백업 체계** — 운영 hourly(`backup_db.py`) + m710q daily pull(`backup-fcmanager.sh`).
       DB·media·nginx tar 포함. 매뉴얼: `docs/operation_manual/backup.md`.
   - [x] `.env` 백업 — `/srv/fcmanager/.env`에서 pull, m710q 백업 검증 완료(2026-06-17).
   - [x] NAS 3계층화 — `/nas/JikhanJung/fcmanager_backup/`(90일) 매일 미러 + dev_data 갱신,
