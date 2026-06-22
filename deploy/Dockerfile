@@ -9,7 +9,7 @@ ARG APP_VERSION=
 LABEL org.opencontainers.image.title="FCManager" \
       org.opencontainers.image.description="FCManager — 축구 클럽 관리 SaaS (Django)" \
       org.opencontainers.image.version="${APP_VERSION}" \
-      org.opencontainers.image.source="https://github.com/honestjung/fcsky"
+      org.opencontainers.image.source="https://github.com/jikhanjung/fcmanager"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
