@@ -42,9 +42,12 @@ source ~/venv/fcmanager/bin/activate
 
 ```
 config/              프로젝트 설정 (settings.py, urls.py)
+apps/clubs/          Club, ClubMembership + 테넌트 라우팅 미들웨어·권한·홈
 apps/teams/          Team, Player, TeamMembership + 홈/팀 뷰·URL
-apps/competitions/   Season, Competition, CompetitionEntry, Award
-apps/matches/        Opponent, Match, MatchEvent
+apps/competitions/   Competition, Division(부문), CompetitionEntry, Award
+apps/matches/        Opponent, Match, MatchEvent, MatchLineup, MatchVideo + 중계
+apps/notices/        Notice(공지)
+apps/gallery/        GalleryItem(갤러리)
 templates/           base.html + 앱별 템플릿 (Bootstrap 5, CDN)
 static/img/          사이트 로고 등 브랜딩 자산
 ```
@@ -53,16 +56,23 @@ static/img/          사이트 로고 등 브랜딩 자산
 
 ## 도메인 모델 핵심
 
-- **선수의 팀 소속·등번호·주장은 `TeamMembership`(선수↔팀↔시즌)** 에 둔다. 시즌/팀 이동 표현용.
+- **멀티테넌트**: 모든 루트 모델은 `Club` FK 를 가지며, 요청은 슬러그 경로(`/<club-slug>/`)로
+  스코핑된다(`apps.clubs.middleware.TenantMiddleware`). 새 모델도 `club` FK 를 둘 것.
+- **대회 구조**: `Competition`(연도·종류) 아래 `Division`(부문, 연령대)을 두고, `CompetitionEntry`가
+  대회·부문에 팀(Team) 또는 상대팀(Opponent)을 등록. `Match`는 home/away 를 참가팀으로 연결.
+- **선수의 팀 소속·등번호·주장은 `TeamMembership`(선수↔팀↔대회)** 에 둔다. 대회 단위 명단·팀 이동 표현용.
   등번호를 `Player`에 직접 넣지 말 것.
 - **`Match.result`** 프로퍼티가 우리 팀 기준 승(W)/무(D)/패(L)를 자동 판정. 점수 미입력 시 `None`.
-- **`MatchEvent`** (side·event_type·minute·player)는 득점/카드/교체 기록이자 **Phase 4 실시간 중계의 기반**.
+- **`MatchEvent`** (side·event_type·minute·player)는 득점/카드/교체 기록이자 **실시간 중계의 기반**.
   새 경기 기능은 이 모델을 활용/확장하는 방향으로.
 - 사용자 노출 텍스트·`verbose_name`은 **한글**로.
 
 ## 규칙 / 관례
 
-- 데이터 입력은 1차적으로 **Django Admin(`/admin/`)** 으로 한다. 새 모델은 admin에도 등록(검색·필터·autocomplete 포함).
+- 데이터 입력은 대부분 **운영진(클럽 staff) 웹 화면**(`/manage/`·`/teams/`·`/matches/` 등,
+  `@staff_required`)에서 한다. 아직 admin 전용인 것: 참가팀(CompetitionEntry)·입상(Award)·
+  상대팀(Opponent)·출전명단(MatchLineup)·클럽 멤버십(ClubMembership)·부문 시간 오버라이드.
+- 새 모델은 **admin에도 등록**(검색·필터·autocomplete 포함) — 백업/보조 입력 경로.
 - `autocomplete_fields`를 쓰려면 대상 ModelAdmin에 `search_fields`가 있어야 함.
 - 프론트는 Django Template + Bootstrap 5(현재 CDN). 별도 JS 빌드 도입 안 함.
 - 업로드 이미지는 `media/`, 브랜딩 정적 자산은 `static/`.
@@ -77,6 +87,7 @@ static/img/          사이트 로고 등 브랜딩 자산
 
 ## 현재 상태
 
-- **Phase 1·2 완료** (모델·Admin·기본 페이지·로고·시드 + 일정/결과·경기 상세·순위표·
-  득점 순위·명예의 전당·선수 상세 공개 조회 페이지). 다음은 **Phase 3 운영 편의 기능**.
-  상세 로드맵은 `TODOs.md` 참고.
+- **Phase 1~4 완료** + 멀티테넌트 SaaS 전환 + Docker 배포(`fcmanager.app` 운영):
+  공개 조회 페이지(일정/결과·경기 상세·순위표·득점 순위·명예의 전당·선수 상세), 운영진 웹 입력,
+  공지·갤러리, 실시간 중계 콘솔(연장전·승부차기·시청자 진행시계)까지 가동 중.
+- PostgreSQL 전환은 보류(SQLite 볼륨 영속). 현재 상태/다음 작업은 `HANDOFF.md`·`TODOs.md` 참고.
